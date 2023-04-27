@@ -3,7 +3,6 @@ import random
 import os
 import time
 import pandas as pd
-from initial_generate import generate_initials
 from adaptation import adapt
 from Cluster import last_selection
 from scipy.special import comb

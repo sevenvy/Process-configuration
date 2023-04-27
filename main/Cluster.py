@@ -5,7 +5,6 @@ import copy
 import math
 import pandas as pd
 from adaptation import adapt
-from initial_generate import generate_initials
 
 
 # 参考点定义，Deb and Jain’s Method，产生双层超平面，减少参考点个数
@@ -198,17 +197,3 @@ def first_edge(archive, adaption):
     adap_edge = choose_adap.tolist()
     generate_edge = choose_generate.tolist()
     return generate_edge, adap_edge
-
-
-if __name__ == '__main__':
-    num_process = 18
-    num_adp = 3
-    Z = (num_process, num_adp)  # 对某一特定维度的问题，参考点不变，可直接在外部定义
-    j = pd.read_csv('../database/feature.csv')
-    quinary = pd.read_csv('../database/quinary_combination.csv')
-    generate = generate_initials(j, quinary, 100)
-    adaption_total = []
-    for initial in generate:
-        adaption_total.append(adapt(initial))
-    archive, adapti = cluster(generate, Z, adaption_total, 50)
-    print(archive)
