@@ -6,7 +6,7 @@ import pandas as pd
 if __name__ == '__main__':
     N = 100  # 种群数量
     J = pd.read_csv('../database/feature.csv')
-    max_run = 10  # 最大运行次数
+    max_run = 20  # 最大运行次数
 
     for run in range(1, max_run+1):
         initials = []

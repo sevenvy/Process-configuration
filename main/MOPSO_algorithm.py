@@ -1,4 +1,5 @@
 """多目标粒子群算法"""
+import math
 import os
 import sys
 import random
@@ -121,8 +122,8 @@ def cluster(archive, adaption, refer_point, num_reserve):
     return result_set, result_adap
 
 
-# 拥挤度函数，计算集合i中各个元素的拥挤度，并选择需要的个体
-def crowded_sort(rank, rank_adapt, num):
+# 对外部档案集全局最优进行选择，对同一前沿的解进行拥挤度排序，选择密度最低的解
+def gbest_choose(rank, rank_adapt):
     """
     rank:集合i
     num:已选择的个体数量与需要的数量之间的差值，需要从集合i中选出
@@ -132,26 +133,25 @@ def crowded_sort(rank, rank_adapt, num):
     rank_adapt = np.array(rank_adapt)
     rank = rank[np.argsort(-rank_adapt[:, 0], axis=0)]
     rank_adapt = rank_adapt[np.argsort(-rank_adapt[:, 0], axis=0)]
-    crow = np.zeros([len(rank), 1])  # 存储集合i中各个个体的拥挤度
-    crow[0], crow[len(rank)-1] = sys.maxsize, sys.maxsize  # 等级集合的第一个与最后一个元素拥挤度无限大，优先选择
+    crow = np.ones([len(rank), 1])  # 存储集合i中各个个体的拥挤度
+    crow[0], crow[len(rank)-1] = 0, 0  # 避免选择头尾解作为全局最优
     # 对中间元素计算拥挤度
     for q in range(1, len(rank)-1):
         for ap in range(len(rank_adapt[0])):
-            crow[q] *= (rank_adapt[q + 1, ap] - rank_adapt[q - 1, ap])
-    # 再按照拥挤度大小对集合进行排序
-    rank = rank[np.argsort(-crow[:, 0], axis=0)]
-    rank_adapt = rank_adapt[np.argsort(-crow[:, 0], axis=0)]
-    crow_generate = rank[0:num].tolist()  # 选出num个个体
-    crow_adapt = rank_adapt[0:num].tolist()
+            crow[q] *= abs(rank_adapt[q + 1, ap] - rank_adapt[q - 1, ap])
+    # 通过轮盘赌选择需要的个体,基于拥挤度大小确定选取概率
+    crow = crow / np.sum(crow)
+    crow = np.cumsum(crow)
+    rand = np.random.rand()
+    ort = 0
+    for j in range(len(crow)):
+        if rand < crow[j]:
+            ort = j
+            break
+    # 选取ort个体
+    crow_generate = rank[ort].tolist()
+    crow_adapt = rank_adapt[ort].tolist()
     return crow_generate, crow_adapt
-
-
-# 对外部档案集进行选择，对同一前沿的解进行拥挤度排序，选择密度最低的解
-def gbest_choose(archive, archive_adapt, num):
-    # 每次迭代都会加入新的个体，所以需要选出第一前沿，然后对同一前沿的解进行拥挤度排序，选择密度最低的解
-    generate_edge, adap_edge = first_edge(archive, archive_adapt)
-    generate_best, adap_best = crowded_sort(generate_edge, adap_edge, num)
-    return generate_best[0], adap_best[0]
 
 
 """参数设置"""
@@ -160,11 +160,11 @@ c1 = 0.6  # 自身认知因子，粒子下一步动作来源于自身经验部�
 c2 = 0.3  # 社会认知因子，下一步动作来源于其它粒子经验部分所占的权重，将粒子推向群体最优位置
 v_initial = 0  # 初始速度
 v_max = 1.0  # 限制最大速度
-iter_max = 200  # 最大迭代次数
+iter_max = 300  # 最大迭代次数
 
-nochange_max = 200  # 最大无变化次数
-max_run = 10  # 最大运行次数
-SL = 200  # archive的最大容量
+nochange_max = 100  # 最大无变化次数
+max_run = 20  # 最大运行次数
+SL = 100  # archive的最大容量
 result_dir = '../result'  # 结果保存路径
 MOPSO_dir = 'MOPSO'  # MOPSO算法结果保存路径
 '''数据读取'''
@@ -188,7 +188,7 @@ for run in range(1, max_run+1):
     print('第' + str(run) + '次运行', '......')
     t3 = time.time()
     print('Configuration optimizing by MOPSO......')
-    omiga = 1.1  # 惯性权重，上一代粒子的速度对当代粒子的速度的影响
+    omiga = 0.9  # 惯性权重，上一代粒子的速度对当代粒子的速度的影响
     edge_result = []  # 保存每次迭代的最优解
     # 初始化粒子群位置，在0-1之间随机生成，初始化粒子群速度，全部置0
     locations = pd.read_csv(
@@ -208,7 +208,7 @@ for run in range(1, max_run+1):
     nochange_flag = 0  # 记录archive解集不变的次数
     while it < iter_max and nochange_flag < nochange_max:
         # 初始化粒子群的全局最优位置与适应值,这里是单一位置
-        g_best, g_best_adapt = gbest_choose(archive, archive_adapt, 1)
+        g_best, g_best_adapt = gbest_choose(archive, archive_adapt)
         omiga -= 0.6 / iter_max  # 更新惯性权重
         # 更新粒子群的位置和速度
         for one in range(N):
@@ -228,10 +228,8 @@ for run in range(1, max_run+1):
         # 对新生成的解进行选择，保留前沿解
         archive_new,  archive_adapt_new = first_edge(locations, locations_adapt)
         # 对新生成的解去重，并与archive解集合并
-        for i in range(len(archive_new)):
-            if archive_new[i] not in archive:
-                archive.append(archive_new[i])
-                archive_adapt.append(archive_adapt_new[i])
+        archive += archive_new
+        archive_adapt += archive_adapt_new
         # 在archive解集中选择，保留前沿解,同时保证解集的最大容量
         archive, archive_adapt = cluster(archive, archive_adapt, Refer_point, SL)
         # archive, archive_adapt = first_edge(archive, archive_adapt)
@@ -246,9 +244,6 @@ for run in range(1, max_run+1):
             if len(np.where(difference > 0)[0]) == 0:
                 p_best[one] = locations[one]
                 p_best_adapt[one] = locations_adapt[one]
-            # 新位置的适应值均大于个体最优适应值，最优解支配新解，不更新
-            elif len(np.where(difference < 0)[0]) == 0:
-                pass
         it += 1
         # 判断archive解集是否发生变化
     file = pd.DataFrame(edge_result)

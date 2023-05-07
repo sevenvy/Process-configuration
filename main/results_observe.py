@@ -35,7 +35,7 @@ def object_reverse(object_nor):
 
 
 """多次计算同时观察各项评估指标"""
-test_num_total = 10  # 一共四次计算
+test_num_total = 20  # 一共四次计算
 for i in range(1, test_num_total+1):
     algo_hypervolume = []  # 用于记录不同算法的超体积
     '''读取多目标函数值数据'''

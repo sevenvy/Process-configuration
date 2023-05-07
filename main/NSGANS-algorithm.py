@@ -278,11 +278,11 @@ def NS(generate):
 
 
 '''NSGA-III算法参数设置'''
-N = 100  # 种群个体数量，需要为偶数以便交叉操作 100
+N = 50  # 种群个体数量，需要为偶数以便交叉操作 100
 pm = 0.05  # 变异概率
-max_iter = 200  # 总体最大迭代次数
-max_nochange = 200  # 最优前沿持续未变化的最大迭代次数
-max_run = 10  # 最大运行次数
+max_iter = 300  # 总体最大迭代次数
+max_nochange = 100  # 最优前沿持续未变化的最大迭代次数
+max_run = 20  # 最大运行次数
 result_dir = '../result'
 NSGANS_dir = 'NSGA-NS'
 '''数据读取'''

@@ -67,12 +67,12 @@ print('Data loading is finished in ' + str(t2 - t1) + 's.')
 """AMOSA算法参数设置"""
 num_adap = 3  # 目标函数数量
 t_initial = 500  # 初始温度
-iter_max = 200  # 最大迭代次数
+iter_max = 300  # 最大迭代次数
 lowest_t = 0.1  # 最低温度
-afa = 0.95  # 冷却速率
+afa = 0.98  # 冷却速率
 max_change = 100  # 当连续多次都不接受新的状态，开始改变温度
 max_iter = 100  # 最大迭代次数
-max_run = 10  # 最大运行次数
+max_run = 20  # 最大运行次数
 HL = 90  # 终止时归档集的大小
 SL = 100  # 在使用聚类算法将其大小减少到HL之前，归档集大小可以达到的最大值
 result_dir = '../result'
