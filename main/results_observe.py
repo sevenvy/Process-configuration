@@ -1,7 +1,8 @@
 import os
 import numpy as np
 import pandas as pd
-from algrithm_compare import hypervolume, front_read
+from algrithm_compare import hypervolume, front_read, DPO, ENS_3
+from Cluster import first_edge
 
 
 # 规范化处理
@@ -36,8 +37,10 @@ def object_reverse(object_nor):
 
 """多次计算同时观察各项评估指标"""
 test_num_total = 20  # 一共四次计算
+DPO_result = pd.DataFrame(columns=['AMOSA', 'NSGAIII', 'MOPSO', 'MOAPSO', 'NSGANS'])
 for i in range(1, test_num_total+1):
     algo_hypervolume = []  # 用于记录不同算法的超体积
+    algo_dpo = []  # 记录不同算法的最终解不被支配的比例
     '''读取多目标函数值数据'''
     # object_AMOSA
     AMOSA_path = os.path.join('../result', 'AMOSA', 'edge_result_' + str(i) + '.csv')
@@ -56,6 +59,7 @@ for i in range(1, test_num_total+1):
     object_NSGA_NS = front_read(object_NSGA_NS_path)
     '''求各优化目标方向上的全局极值'''
     objects_overall = object_AMOSA + object_NSGA3 + object_MOPSO + object_MOAPSO + object_NSGA_NS
+    '''超体积计算'''
     min_ksi = []
     max_ksi = []
     for k in range(len(objects_overall)):
@@ -85,9 +89,9 @@ for i in range(1, test_num_total+1):
     for k in range(len(object_MOAPSO)):
         MOAPSO_normalizes.append(object_normalize(object_MOAPSO[k], min_overall, max_overall))
     # NSGA_NS_normalizes
-    NSGA_NS_normalizes = []
+    NSGANS_normalizes = []
     for k in range(len(object_NSGA_NS)):
-        NSGA_NS_normalizes.append(object_normalize(object_NSGA_NS[k], min_overall, max_overall))
+        NSGANS_normalizes.append(object_normalize(object_NSGA_NS[k], min_overall, max_overall))
     '''大小反转（原本各指标越小越好，但为便于求超体积，这里反转成越大越好）'''
     # AMOSA_reverses
     AMOSA_reverses = []
@@ -107,8 +111,8 @@ for i in range(1, test_num_total+1):
         MOAPSO_reverses.append(object_reverse(MOAPSO_normalizes[k]))
     # NSGA_NS_reverses
     NSGA_NS_reverses = []
-    for k in range(len(NSGA_NS_normalizes)):
-        NSGA_NS_reverses.append(object_reverse(NSGA_NS_normalizes[k]))
+    for k in range(len(NSGANS_normalizes)):
+        NSGA_NS_reverses.append(object_reverse(NSGANS_normalizes[k]))
     '''超体积比较(越大越好)'''
     # AMOSA_volumes
     AMOSA_volume = []
@@ -142,6 +146,29 @@ for i in range(1, test_num_total+1):
     algo_hypervolume = pd.DataFrame(algo_hypervolume)
     algo_hypervolume.columns = ['AMOSA', 'NSGAIII', 'MOPSO', 'MOAPSO', 'NSGANS']  # 为每一列数据添加标签
     algo_hypervolume.to_csv(os.path.join('../result', 'hypervolume', 'test_' + str(i) + '.csv'), index=False)
+
+    '''支配比例'''
+    front_overall = object_AMOSA[-1] + object_NSGA3[-1] + object_MOPSO[-1] + object_MOAPSO[-1] + object_NSGA_NS[-1]
+    AMOSA_DPO_num = DPO(front_overall, object_AMOSA[-1])
+    NSGA3_DPO_num = DPO(front_overall, object_NSGA3[-1])
+    MOPSO_DPO_num = DPO(front_overall, object_MOPSO[-1])
+    MOAPSO_DPO_num = DPO(front_overall, object_MOAPSO[-1])
+    NSGANS_DPO_num = DPO(front_overall, object_NSGA_NS[-1])
+    # 计算比例
+    AMOSA_DPO = AMOSA_DPO_num / len(object_AMOSA[-1])
+    algo_dpo.append(AMOSA_DPO)
+    NSGA3_DPO = NSGA3_DPO_num / len(object_NSGA3[-1])
+    algo_dpo.append(NSGA3_DPO)
+    MOPSO_DPO = MOPSO_DPO_num / len(object_MOPSO[-1])
+    algo_dpo.append(MOPSO_DPO)
+    MOAPSO_DPO = MOAPSO_DPO_num / len(object_MOAPSO[-1])
+    algo_dpo.append(MOAPSO_DPO)
+    NSGANS_DPO = NSGANS_DPO_num / len(object_NSGA_NS[-1])
+    algo_dpo.append(NSGANS_DPO)
+    algo_dpo = pd.DataFrame([algo_dpo], columns=['AMOSA', 'NSGAIII', 'MOPSO', 'MOAPSO', 'NSGANS'])
+    DPO_result = DPO_result.append(algo_dpo)
+    print(DPO_result)
     print('第' + str(i) + '次计算完成！')
+DPO_result.to_csv('../result/DPO/DPO.csv', index=False)
 
 
