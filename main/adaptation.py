@@ -2,12 +2,12 @@ import math
 import pandas as pd
 
 if __name__ == "__main__":  # 如果是其他文件调用这个文件的函数，则只有其他部分会执行，这之后的部分不执行
-    NP = 100  # 待加工产品数量
-    TSH = 1.5  # 安装刀具时间
-    TSH1 = 2.5  # 刀具磨损更换时间
-    TV = 2  # 运输系统平均运输速率
-    CD = 50  # 单位运输距离的物料运输成本
-    CRP = 500  # 原材料成本
+    NP = 200  # 待加工产品数量
+    TSH = 0.2  # 安装刀具时间
+    TSH1 = 0.05  # 刀具磨损更换时间
+    TV = 1800  # 运输系统平均运输速率
+    CD = 0.3  # 单位运输距离的物料运输成本
+    CRP = 50  # 原材料成本
     Combination = [[17,1,1,30,37], [100,6,1,30,2], [27,2,1,15,23], [57,4,1,10,12]]
 
 
@@ -22,12 +22,12 @@ def adapt(combination):
     :return: [设备负载率，加工时间，加工成本]
     """
     # 与设备刀具三元组合均无关的常量
-    NP = 100  # 待加工产品数量
-    TSH = 1.5  # 安装刀具时间
-    TSH1 = 2.5  # 刀具磨损更换时间
-    TV = 2  # 运输系统平均运输速率
-    CD = 50  # 单位运输距离的物料运输成本
-    CRP = 500  # 原材料成本
+    NP = 200  # 待加工产品数量
+    TT = 0.2  # 安装刀具时间
+    TT1 = 0.05  # 刀具磨损更换时间
+    TV = 1800  # 运输系统平均运输速率
+    CD = 0.3  # 单位运输距离的物料运输成本
+    CP = 50  # 原材料成本
 
     # 变量
     machine = []  # 该三元组合的设备集
@@ -66,11 +66,11 @@ def adapt(combination):
                 k_j = math.ceil(k_j)  # 每个特征加工所需要的刀头数量
             CMU += k_j * t.at[combination[feature_set[each_f]][4], 'CST Accessory price']  # 刀头价格
             tmp_m += NP * quinary.at[combination[feature_set[each_f]][0], 'TJ Processing duration']
-            tmh_m += TSH1 * k_j
+            tmh_m += TT1 * k_j
         for idx in range(1, len(feature_set)):
             if feature_set[idx] != feature_set[idx-1]:
-                tmh_m += NP * TSH
-                TS += TSH
+                tmh_m += NP * TT
+                TS += TT
         TMP.append(tmp_m)
         TMA.append(tmh_m+tmp_m)
     for mach in machine:
@@ -84,7 +84,7 @@ def adapt(combination):
     # 产品生产成本
     for index in range(len(machine)):
         CMF += (T-TMP[index]) * m.at[machine[index] - 1, 'CPW Unit time cost of waiting']
-    C = CMD+CMF+CMU+NP*(NML*CD+CRP)
+    C = CMD+CMF+CMU+NP*(NML*CD+CP)
     return [W, T, C]
 
 
